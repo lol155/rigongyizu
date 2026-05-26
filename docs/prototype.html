@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>日拱一卒 - V6</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--primary:#FF6B35;--primary-light:#FFA07A;--primary-bg:#FFF3ED;--bg:#F8F9FA;--card:#FFFFFF;--text:#1A1A2E;--text2:#6B7280;--text3:#9CA3AF;--success:#10B981;--warning:#F59E0B;--danger:#EF4444;--purple:#8B5CF6;--blue:#3B82F6;--shadow:0 2px 12px rgba(0,0,0,.06);--radius:16px}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',sans-serif;background:#E5E5EA;display:flex;justify-content:center;align-items:center;min-height:100vh;color:var(--text)}
+.phone{width:375px;height:812px;background:var(--bg);border-radius:44px;overflow:hidden;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.15);border:8px solid #1A1A2E}
+.statusbar{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;font-size:14px;font-weight:600;background:var(--card);position:relative;z-index:10}
+.statusbar .notch{width:120px;height:28px;background:#1A1A2E;border-radius:0 0 20px 20px;position:absolute;left:50%;transform:translateX(-50%);top:0}
+.pages{height:calc(812px - 44px - 80px);overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+.pages::-webkit-scrollbar{width:0}
+.page{display:none;padding:0 16px 16px}
+.page.active{display:block;animation:fadeIn .25s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.tabbar{height:80px;display:flex;align-items:flex-start;padding-top:8px;background:var(--card);border-top:1px solid #F0F0F0;position:absolute;bottom:0;left:0;right:0}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:6px 0;transition:all .2s;-webkit-tap-highlight-color:transparent}
+.tab .icon{font-size:24px}.tab .label{font-size:10px;color:var(--text3);font-weight:500}
+.tab.active .label{color:var(--primary);font-weight:600}.tab.active .icon{transform:scale(1.1)}
+.card{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:12px;box-shadow:var(--shadow);transition:transform .2s}
+.card:active{transform:scale(.98)}
+.sh{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-top:8px}
+.sh .st{font-size:17px;font-weight:700}.sh .sl{font-size:13px;color:var(--primary);cursor:pointer}
+.fab{position:absolute;bottom:96px;right:20px;width:56px;height:56px;border-radius:50%;background:var(--primary);color:white;font-size:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px rgba(255,107,53,.4);transition:transform .2s;z-index:5}
+.fab:active{transform:scale(.9)}
+
+/* ====== SCHEDULE PAGE ====== */
+.zoom-bar{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.zoom-btn{width:28px;height:28px;border-radius:8px;border:1px solid #E5E7EB;background:white;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;transition:all .15s}
+.zoom-btn:hover{background:var(--primary-bg);border-color:var(--primary)}
+.zoom-btn:active{transform:scale(.9)}
+.zoom-label{font-size:11px;color:var(--text3);flex:1}
+.sched-header{display:flex;align-items:center;justify-content:space-between;padding:12px 0}
+.sched-header .date-label{font-size:18px;font-weight:700}
+.sched-header .date-sub{font-size:12px;color:var(--text2)}
+.sched-nav{display:flex;gap:8px}
+.sched-nav span{width:32px;height:32px;border-radius:50%;background:var(--card);box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px}
+.view-switch{display:flex;gap:0;background:#F0F0F0;border-radius:10px;padding:3px;margin-bottom:12px}
+.vs{flex:1;text-align:center;padding:6px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;color:var(--text2);transition:all .2s}
+.vs.active{background:var(--card);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.06)}
+
+/* Day View */
+.daygrid{position:relative;margin-bottom:8px}
+.dg-row{display:flex;height:48px;position:relative}
+.dg-hour{width:40px;flex-shrink:0;font-size:11px;color:var(--text3);text-align:right;padding-right:8px;line-height:1;padding-top:2px}
+.dg-slot{flex:1;border-top:1px solid #F0F0F0;position:relative;cursor:pointer;transition:background .15s}
+.dg-slot:hover{background:rgba(255,107,53,.03)}
+.dg-slot::after{content:'';position:absolute;top:50%;left:0;right:0;border-top:1px dashed #F5F5F5}
+.dg-slot.half-start{background:rgba(255,107,53,.04)}
+.nowline{position:absolute;left:40px;right:0;height:2px;background:var(--danger);z-index:3;pointer-events:none}
+.nowline::before{content:'';position:absolute;left:-4px;top:-3px;width:8px;height:8px;border-radius:50%;background:var(--danger)}
+.tblock{position:absolute;left:44px;right:4px;border-radius:10px;padding:6px 10px;font-size:12px;cursor:pointer;z-index:2;overflow:hidden;transition:transform .15s;border-left:3px solid}
+.tblock:active{transform:scale(.97)}
+.tblock .tb-t{font-weight:600;line-height:1.3}.tblock .tb-g{font-size:10px;opacity:.7;margin-top:1px}
+.tblock.done{opacity:.45}.tblock.done .tb-t{text-decoration:line-through}
+.tblock.c-orange{background:#FFF3ED;border-left-color:var(--primary);color:#C2410C}
+.tblock.c-blue{background:#EFF6FF;border-left-color:var(--blue);color:#1D4ED8}
+.tblock.c-green{background:#F0FDF4;border-left-color:var(--success);color:#166534}
+.tblock.c-purple{background:#FAF5FF;border-left-color:var(--purple);color:#6D28D9}
+.tblock.c-yellow{background:#FFFBEB;border-left-color:var(--warning);color:#92400E}
+.tblock.c-gray{background:#F9FAFB;border-left-color:#9CA3AF;color:#4B5563}
+.free-card{display:flex;align-items:center;gap:10px;padding:10px 14px;margin-top:8px;background:var(--card);border-radius:12px;box-shadow:var(--shadow)}
+.free-card .fv{font-size:20px;font-weight:700;color:var(--success)}.free-card .fl{font-size:12px;color:var(--text2)}
+
+/* Week View */
+.weekgrid{margin-bottom:12px}
+.wg-header{display:flex;margin-bottom:4px}
+.wg-hh{flex:1;text-align:center;font-size:10px;color:var(--text3);padding:4px 0}
+.wg-hh.today{color:var(--primary);font-weight:700}
+.wg-row{display:flex;min-height:40px}
+.wg-cell{flex:1;border:1px solid #F5F5F5;padding:2px;position:relative;min-height:40px;cursor:pointer;transition:background .15s}
+.wg-cell:hover{background:rgba(255,107,53,.05)}.wg-cell.today{background:rgba(255,107,53,.04)}
+.wg-task{font-size:9px;padding:2px 4px;border-radius:4px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.wg-task.orange{background:#FFF3ED;color:#C2410C}.wg-task.blue{background:#EFF6FF;color:#1D4ED8}
+.wg-task.green{background:#F0FDF4;color:#166534}.wg-task.purple{background:#FAF5FF;color:#6D28D9}
+
+/* Month View */
+.monthgrid{margin-bottom:12px}
+.mg-header{display:flex;margin-bottom:4px}
+.mg-hh{flex:1;text-align:center;font-size:11px;color:var(--text3);padding:6px 0;font-weight:500}
+.mg-row{display:flex}
+.mg-cell{flex:1;aspect-ratio:1;border:1px solid #F5F5F5;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;font-size:14px;position:relative}
+.mg-cell.today{background:var(--primary);color:white;border-radius:8px;font-weight:700}
+.mg-cell.has-task::after{content:'';width:4px;height:4px;border-radius:50%;background:var(--primary);position:absolute;bottom:4px}
+.mg-cell.other{color:var(--text3)}
+
+/* ====== GOALS PAGE (Gantt-like) ====== */
+.goal-row{background:var(--card);border-radius:12px;padding:14px;margin-bottom:8px;box-shadow:var(--shadow);cursor:pointer;transition:transform .2s}
+.goal-row:active{transform:scale(.98)}
+.goal-row .gr-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.goal-row .gr-name{font-size:15px;font-weight:600;display:flex;align-items:center;gap:6px}
+.goal-row .gr-pct{font-size:14px;font-weight:700;color:var(--primary)}
+.goal-row .gr-bar{height:8px;background:#F0F0F0;border-radius:4px;overflow:hidden;position:relative}
+.goal-row .gr-fill{height:100%;border-radius:4px;transition:width .6s ease}
+.goal-row .gr-info{display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:var(--text2)}
+
+/* Gantt chart */
+.gantt{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:12px;box-shadow:var(--shadow)}
+.gantt h4{font-size:15px;margin-bottom:12px}
+.gantt-header{display:flex;padding-left:80px;margin-bottom:4px}
+.gantt-header span{flex:1;text-align:center;font-size:9px;color:var(--text3)}
+.gantt-row{display:flex;align-items:center;margin-bottom:6px;height:24px}
+.gantt-label{width:80px;flex-shrink:0;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text2);padding-right:6px}
+.gantt-track{flex:1;height:12px;border-radius:6px;background:#F0F0F0;position:relative;overflow:hidden}
+.gantt-bar{position:absolute;height:100%;border-radius:6px;transition:width .6s ease}
+.gantt-today{position:absolute;top:0;bottom:0;width:1px;background:var(--danger);z-index:2}
+.gantt-milestone{position:absolute;top:-2px;width:8px;height:16px;background:var(--danger);border-radius:2px;z-index:3}
+
+/* Goal detail expand */
+.goal-expand{display:none;background:var(--card);border-radius:12px;padding:14px;margin-top:-4px;margin-bottom:12px;box-shadow:var(--shadow)}
+.goal-expand.show{display:block}
+.ge-title{font-size:13px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+/* Multi-level tree */
+.g-node{margin:4px 0}
+.g-node .gn-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:background .15s;font-size:13px}
+.g-node .gn-row:hover{background:var(--bg)}
+.g-node .gn-icon{font-size:14px;width:20px;text-align:center;flex-shrink:0}
+.g-node .gn-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.g-node .gn-pct{font-size:11px;color:var(--text2);flex-shrink:0;width:35px;text-align:right}
+.g-node .gn-acts{display:flex;gap:4px}
+.g-node .gn-btn{width:24px;height:24px;border-radius:6px;border:1px solid #E5E7EB;background:white;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;transition:all .15s;flex-shrink:0}
+.g-node .gn-btn:hover{background:var(--primary-bg);border-color:var(--primary);color:var(--primary)}
+.g-node.level-1 .gn-row{margin-left:8px;background:var(--primary-bg)}
+.g-node.level-2 .gn-row{margin-left:28px}
+.g-node.level-3 .gn-row{margin-left:48px}
+.g-node.done .gn-name{text-decoration:line-through;opacity:.6}
+.ge-add-btn{width:100%;padding:8px;border:1.5px dashed #D1D5DB;border-radius:8px;background:transparent;color:var(--text2);font-size:13px;cursor:pointer;transition:all .15s;margin-top:8px}
+.ge-add-btn:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-bg)}
+
+/* Templates */
+.tpl-tabs{display:flex;gap:0;background:#F0F0F0;border-radius:10px;padding:3px;margin-bottom:14px;overflow-x:auto;flex-wrap:nowrap}
+.tpl-tab{flex-shrink:0;text-align:center;padding:7px 10px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;color:var(--text2);transition:all .2s;white-space:nowrap}
+.tpl-tab.active{background:var(--card);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.tpl-item{padding:10px 12px;border-radius:10px;margin-bottom:6px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:10px}
+.tpl-item:hover{background:var(--bg)}
+.tpl-item.active{background:var(--primary-bg)}
+.tpl-item .tpl-icon{font-size:20px}
+.tpl-item .tpl-info{flex:1}
+.tpl-item .tpl-name{font-size:14px;font-weight:600}
+.tpl-item .tpl-desc{font-size:11px;color:var(--text2);margin-top:2px}
+.tpl-item .tpl-check{font-size:16px;color:var(--success)}
+.tpl-question{padding:10px 12px;border-radius:10px;margin-bottom:8px;background:var(--bg)}
+.tpl-question .tq-label{font-size:13px;font-weight:500;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.tpl-question .tq-input{width:100%;padding:8px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:14px;outline:none;transition:border-color .2s;font-family:inherit}
+.tpl-question .tq-input:focus{border-color:var(--primary)}
+textarea.tq-input{min-height:50px;resize:none}
+.tpl-manage{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.tpl-manage .tm-title{font-size:15px;font-weight:700}
+.tpl-manage .tm-link{font-size:13px;color:var(--primary);cursor:pointer}
+
+/* Saved template card */
+.saved-tpl{background:var(--card);border-radius:12px;padding:12px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.04);display:flex;align-items:center;gap:10px;cursor:pointer;transition:all .15s}
+.saved-tpl:hover{box-shadow:var(--shadow)}
+.saved-tpl:active{transform:scale(.98)}
+.saved-tpl .st-icon{font-size:24px;width:36px;text-align:center}
+.saved-tpl .st-info{flex:1;min-width:0}
+.saved-tpl .st-name{font-size:14px;font-weight:600}
+.saved-tpl .st-meta{font-size:11px;color:var(--text2);margin-top:2px}
+.saved-tpl .st-acts{display:flex;gap:6px}
+.saved-tpl .st-btn{width:28px;height:28px;border-radius:8px;border:1px solid #E5E7EB;background:white;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;transition:all .15s}
+.saved-tpl .st-btn:hover{background:var(--primary-bg);border-color:var(--primary)}
+.saved-tpl .st-btn.del:hover{background:#FEF2F2;border-color:var(--danger);color:var(--danger)}
+
+/* Journal list */
+.search-bar{display:flex;gap:8px;margin-bottom:12px}
+.search-input{flex:1;padding:10px 14px 10px 36px;border:1.5px solid #E5E7EB;border-radius:12px;font-size:14px;outline:none;background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='M21 21l-4.35-4.35'/%3E%3C/svg%3E") 12px center no-repeat;transition:border-color .2s}
+.search-input:focus{border-color:var(--primary)}
+.search-filter{padding:8px 14px;border:1.5px solid #E5E7EB;border-radius:12px;background:var(--card);font-size:13px;color:var(--text2);cursor:pointer}
+.search-filter.active{border-color:var(--primary);color:var(--primary);background:var(--primary-bg)}
+.journal-card{background:var(--card);border-radius:12px;padding:14px;margin-bottom:8px;box-shadow:var(--shadow);cursor:pointer;transition:transform .15s}
+.journal-card:active{transform:scale(.98)}
+.journal-card .jc-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.journal-card .jc-type{font-size:12px;font-weight:600;padding:3px 10px;border-radius:8px}
+.journal-card .jc-type.refl{background:#FEF3C7;color:#92400E}
+.journal-card .jc-type.rv{background:#DBEAFE;color:#1D4ED8}
+.journal-card .jc-date{font-size:12px;color:var(--text2)}
+.journal-card .jc-tpl{font-size:11px;color:var(--text3)}
+.journal-card .jc-body{font-size:13px;line-height:1.6;color:var(--text)}
+.journal-card .jc-body .highlight{background:#FEF3C7;padding:0 2px;border-radius:2px}
+.journal-card .jc-footer{display:flex;gap:6px;margin-top:8px}
+.journal-card .jc-tag{font-size:11px;padding:3px 8px;border-radius:8px;background:var(--bg);color:var(--text2)}
+.journal-empty{text-align:center;padding:40px 20px;color:var(--text3)}
+.journal-empty .je-icon{font-size:48px;margin-bottom:12px}
+.journal-empty .je-text{font-size:14px;margin-bottom:4px}
+
+/* ====== REVIEW PAGE ====== */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.stat-card{background:var(--card);border-radius:12px;padding:14px;text-align:center;box-shadow:var(--shadow)}
+.stat-card .sv{font-size:28px;font-weight:700}.stat-card .sl{font-size:12px;color:var(--text2);margin-top:4px}
+.stat-card.orange .sv{color:var(--primary)}.stat-card.green .sv{color:var(--success)}
+.chart-card{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:12px;box-shadow:var(--shadow)}
+.chart-card h4{font-size:15px;margin-bottom:12px}
+canvas.chart{width:100%;height:150px}
+.rv-card{background:var(--card);border-radius:12px;padding:14px;margin-bottom:10px;box-shadow:var(--shadow);cursor:pointer;display:flex;align-items:center;gap:12px}
+.rv-card .re{font-size:28px}.rv-card .ri{flex:1}.rv-card .rd{font-size:14px;font-weight:600}.rv-card .rs{font-size:12px;color:var(--text2);margin-top:2px}.rv-card .rr{font-size:20px;font-weight:700;color:var(--primary)}
+
+/* ====== PROFILE PAGE ====== */
+.prof-head{text-align:center;padding:24px 0 16px}
+.prof-av{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-light));display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 12px}
+.prof-name{font-size:20px;font-weight:700}.prof-bio{font-size:13px;color:var(--text2);margin-top:4px}
+.s-item{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:var(--card);margin-bottom:1px;cursor:pointer;font-size:15px}
+.s-item:first-child{border-radius:12px 12px 0 0}.s-item:last-child{border-radius:0 0 12px 12px;margin-bottom:12px}
+.s-item .sr{color:var(--text3);font-size:13px}
+
+/* ====== MODALS ====== */
+.modal-bg{position:absolute;inset:0;background:rgba(0,0,0,.4);display:none;align-items:flex-end;justify-content:center;z-index:100}
+.modal-bg.active{display:flex}
+.modal{background:var(--card);width:100%;border-radius:24px 24px 0 0;padding:20px 16px 40px;max-height:80%;overflow-y:auto}
+.modal-handle{width:36px;height:4px;background:#D1D5DB;border-radius:2px;margin:0 auto 16px}
+.modal h3{font-size:18px;margin-bottom:16px;text-align:center}
+.fg{margin-bottom:14px}
+.fg label{font-size:13px;color:var(--text2);display:block;margin-bottom:6px}
+.fi{width:100%;padding:10px 14px;border:1.5px solid #E5E7EB;border-radius:10px;font-size:15px;outline:none;transition:border-color .2s}
+.fi:focus{border-color:var(--primary)}
+textarea.fi{min-height:60px;resize:none;font-family:inherit}
+select.fi{appearance:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='%239CA3AF'/%3E%3C/svg%3E") no-repeat right 14px center white}
+.btn{width:100%;padding:12px;background:var(--primary);color:white;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;margin-top:8px}
+.btn:active{opacity:.9}
+.btn-cancel{background:var(--text2)}
+
+.heatmap{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.hc{width:100%;aspect-ratio:1;border-radius:3px;background:#F0F0F0}
+.hc.l1{background:#FED7AA}.hc.l2{background:#FDBA74}.hc.l3{background:#FB923C}.hc.l4{background:var(--primary)}
+
+/* Reflection in schedule */
+.refl-card{background:linear-gradient(135deg,var(--primary),var(--primary-light));color:white;border-radius:var(--radius);padding:16px;margin-bottom:12px;cursor:pointer}
+.refl-card h3{font-size:15px;margin-bottom:4px}.refl-card p{font-size:12px;opacity:.85}
+
+/* Review modal */
+.rv-task{display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;margin-bottom:6px;background:#F8F9FA}
+.rv-task .rv-status{display:flex;gap:6px}
+.sb{padding:4px 10px;border-radius:8px;font-size:12px;border:1.5px solid #E5E7EB;background:white;cursor:pointer;transition:all .2s}
+.sb.done{border-color:var(--success);color:var(--success);background:#F0FDF4}
+.sb.post{border-color:var(--warning);color:var(--warning);background:#FFFBEB}
+.sb.cancel{border-color:var(--danger);color:var(--danger);background:#FEF2F2}
+.sb.sel{color:white}
+.sb.sel.done{background:var(--success)}.sb.sel.post{background:var(--warning)}.sb.sel.cancel{background:var(--danger)}
+</style>
+</head>
+<body>
+<div class="phone">
+<div class="statusbar"><span>10:24</span><div class="notch"></div><span>📶 🔋</span></div>
+
+<div class="pages">
+<!-- ====== SCHEDULE ====== -->
+<div class="page active" id="pg-sched">
+  <div class="sched-header">
+    <div><div class="date-label" id="dateLabel">4月22日 周三</div><div class="date-sub">今天 · 6项任务</div></div>
+    <div class="sched-nav"><span onclick="changeDate(-1)">‹</span><span onclick="changeDate(0)" style="font-size:12px;font-weight:600">今</span><span onclick="changeDate(1)">›</span></div>
+  </div>
+  <div class="view-switch"><div class="vs active" onclick="switchView('day',this)">日</div><div class="vs" onclick="switchView('week',this)">周</div><div class="vs" onclick="switchView('month',this)">月</div></div>
+
+  <!-- Morning reflection with template -->
+  <div class="refl-card" onclick="openModal('reflModal')"><h3>☀️ 晨间反思</h3><p>模板：每日反思 · 今天最重要的：完成原型 · 阅读 · 锻炼</p></div>
+
+  <!-- Day View -->
+  <div id="view-day">
+    <div class="sh"><span class="st">📋 日程安排</span><span class="sl" id="progText">完成 3/6</span></div>
+    <div class="zoom-bar">
+      <button class="zoom-btn" onclick="zoom(-1)">−</button>
+      <span class="zoom-label" id="zoomLabel">1x 缩放</span>
+      <button class="zoom-btn" onclick="zoom(1)">+</button>
+      <button class="zoom-btn" onclick="zoom(0)" style="font-size:11px;width:auto;padding:0 8px">适应</button>
+    </div>
+    <div style="overflow-y:auto;overflow-x:hidden;max-height:420px;-webkit-overflow-scrolling:touch" id="dayGridWrap">
+      <div class="daygrid" id="dayGrid"></div>
+    </div>
+    <div class="free-card"><span style="font-size:20px">🕐</span><div style="flex:1"><div style="font-size:12px;font-weight:600">空闲时段</div><div style="font-size:11px;color:var(--text2)" id="freeText">12:00-14:00 · 15:30-16:00 · 19:00-24:00</div></div><div class="fv" id="freeH">7h</div></div>
+  </div>
+
+  <!-- Week View -->
+  <div id="view-week" style="display:none">
+    <div class="sh"><span class="st">📋 本周日程</span></div>
+    <div class="weekgrid" id="weekGrid"></div>
+  </div>
+
+  <!-- Month View -->
+  <div id="view-month" style="display:none">
+    <div class="sh"><span class="st">📋 4月日程</span></div>
+    <div class="monthgrid" id="monthGrid"></div>
+  </div>
+
+  <!-- Evening review -->
+  <div class="card" style="background:linear-gradient(135deg,#667EEA,#764BA2);color:white;margin-top:12px;cursor:pointer;padding:14px" onclick="openModal('reviewModal')">
+    <div style="display:flex;justify-content:space-between;align-items:center"><div><h3 style="font-size:15px;margin-bottom:2px">🌙 晚间复盘</h3><p style="font-size:12px;opacity:.85">花3分钟回顾今天</p></div><span style="font-size:22px">→</span></div>
+  </div>
+</div>
+
+<!-- ====== GOALS ====== -->
+<div class="page" id="pg-goals">
+  <div style="padding:16px 0 12px"><h2 style="font-size:24px;font-weight:700">🎯 目标进度</h2><p style="font-size:13px;color:var(--text2);margin-top:4px">项目管理视角，一目了然</p></div>
+
+  <!-- Gantt Overview -->
+  <div class="gantt">
+    <h4>📊 项目进度总览</h4>
+    <div class="gantt-header" id="ganttHeader"></div>
+    <div id="ganttBody"></div>
+  </div>
+
+  <!-- Goal Rows -->
+  <div id="goalList"></div>
+
+  <!-- Expanded Detail -->
+  <div class="goal-expand" id="goalExpand"></div>
+
+  <div style="text-align:center;padding:8px">
+    <span style="font-size:13px;color:var(--primary);cursor:pointer" onclick="openModal('goalModal')">+ 添加新目标</span>
+  </div>
+</div>
+
+<!-- ====== REVIEW ====== -->
+<div class="page" id="pg-review">
+  <div style="padding:16px 0 12px"><h2 style="font-size:24px;font-weight:700">📊 复盘中心</h2><p style="font-size:13px;color:var(--text2);margin-top:4px">数据驱动成长</p></div>
+  <div class="stats-grid">
+    <div class="stat-card orange"><div class="sv">78%</div><div class="sl">本周完成率</div></div>
+    <div class="stat-card green"><div class="sv">12</div><div class="sl">🔥 连续天数</div></div>
+    <div class="stat-card"><div class="sv">23</div><div class="sl">本周任务</div></div>
+    <div class="stat-card"><div class="sv">5</div><div class="sl">进行中目标</div></div>
+  </div>
+  <div class="chart-card"><h4>📈 近7天完成率</h4><canvas id="lineChart" class="chart" height="150"></canvas></div>
+  <div class="chart-card"><h4>🔴 未完成原因</h4><canvas id="pieChart" class="chart" height="180"></canvas></div>
+  <div class="chart-card"><h4>🗓️ 活跃热力图</h4><div class="heatmap" id="heatmap"></div></div>
+  <div class="sh"><span class="st">📝 每日复盘</span><span class="sl">全部</span></div>
+  <div class="rv-card"><div class="re">😊</div><div class="ri"><div class="rd">今天 · 4月22日</div><div class="rs">完成率高，专注时间充足</div></div><div class="rr">83%</div></div>
+  <div class="rv-card"><div class="re">💪</div><div class="ri"><div class="rd">昨天 · 4月21日</div><div class="rs">突破了一个技术难点</div></div><div class="rr">92%</div></div>
+  <div class="rv-card"><div class="re">😌</div><div class="ri"><div class="rd">4月20日</div><div class="rs">被会议打断节奏</div></div><div class="rr">60%</div></div>
+  <div class="rv-card"><div class="re">🔥</div><div class="ri"><div class="rd">4月19日</div><div class="rs">高效的一天</div></div><div class="rr">95%</div></div>
+</div>
+
+<!-- ====== PROFILE ====== -->
+<div class="page" id="pg-profile">
+  <div class="prof-head"><div class="prof-av">🐾</div><div class="prof-name">用户</div><div class="prof-bio">日拱一卒，功不唐捐</div></div>
+  <div class="s-item" style="border-radius:12px 12px 0 0" onclick="swTab('journal',document.querySelectorAll('.tab')[4])"><span>📖 反思复盘记录</span><span class="sr">12篇 ›</span></div>
+  <div class="s-item" onclick="swTab('tplmgr',document.querySelectorAll('.tab')[4])"><span>📝 模板管理</span><span class="sr">5个模板 ›</span></div>
+  <div class="s-item" style="border-radius:0 0 12px 12px"><span>📤 数据导出</span><span class="sr">›</span></div>
+  <div style="margin-top:12px">
+    <div class="s-item" style="border-radius:12px 12px 0 0"><span>🔔 提醒设置</span><span class="sr">8:00 / 21:00 ›</span></div>
+    <div class="s-item"><span>🎨 主题</span><span class="sr">橙色 ›</span></div>
+    <div class="s-item"><span>💬 反馈</span><span class="sr">›</span></div>
+    <div class="s-item" style="border-radius:0 0 12px 12px"><span>📱 关于</span><span class="sr">v6.0 ›</span></div>
+  </div>
+</div>
+
+<!-- ====== JOURNAL LIST ====== -->
+<div class="page" id="pg-journal">
+  <div style="padding:16px 0 8px;display:flex;align-items:center;gap:8px">
+    <span style="font-size:20px;cursor:pointer" onclick="swTab('profile',document.querySelectorAll('.tab')[3])">←</span>
+    <h2 style="font-size:20px;font-weight:700">📖 反思复盘记录</h2>
+  </div>
+  <div class="search-bar">
+    <input class="search-input" placeholder="搜索内容..." id="journalSearch" oninput="filterJournals()">
+    <button class="search-filter active" onclick="toggleFilter(this,'all')">全部</button>
+    <button class="search-filter" onclick="toggleFilter(this,'refl')">反思</button>
+    <button class="search-filter" onclick="toggleFilter(this,'rv')">复盘</button>
+  </div>
+  <div id="journalList"></div>
+</div>
+
+<!-- ====== TEMPLATE MANAGER ====== -->
+<div class="page" id="pg-tplmgr">
+  <div style="padding:16px 0 8px;display:flex;align-items:center;gap:8px">
+    <span style="font-size:20px;cursor:pointer" onclick="swTab('profile',document.querySelectorAll('.tab')[3])">←</span>
+    <h2 style="font-size:20px;font-weight:700">📝 模板管理</h2>
+  </div>
+  <div class="tpl-tabs">
+    <div class="tpl-tab active" onclick="switchTplMgr(this,'refl')">反思模板</div>
+    <div class="tpl-tab" onclick="switchTplMgr(this,'rv')">复盘模板</div>
+  </div>
+  <div id="tplMgrList"></div>
+  <button style="width:100%;padding:10px;border:1.5px dashed #D1D5DB;border-radius:10px;background:transparent;color:var(--primary);font-size:14px;cursor:pointer;margin-top:8px" onclick="openModal('createTplModal')">+ 创建新模板</button>
+</div>
+</div>
+
+<div class="fab" onclick="openModal('taskModal')">+</div>
+
+<div class="tabbar">
+  <div class="tab active" onclick="swTab('sched',this)"><div class="icon">📅</div><div class="label">日程</div></div>
+  <div class="tab" onclick="swTab('goals',this)"><div class="icon">🎯</div><div class="label">目标</div></div>
+  <div class="tab" onclick="swTab('review',this)"><div class="icon">📊</div><div class="label">复盘</div></div>
+  <div class="tab" onclick="swTab('profile',this)"><div class="icon">👤</div><div class="label">我的</div></div>
+</div>
+
+<!-- Add Task Modal -->
+<div class="modal-bg" id="taskModal" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>✏️ 添加任务</h3>
+    <div class="fg"><label>任务名称</label><input class="fi" placeholder="输入任务名称..." id="taskInput"></div>
+    <div class="fg"><label>关联目标（可选）</label>
+      <select class="fi" id="taskGoal">
+        <option value="">不关联目标</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:10px">
+      <div class="fg" style="flex:1"><label>开始时间</label><input class="fi" type="time" id="taskStart" value="10:00"></div>
+      <div class="fg" style="flex:1"><label>时长</label>
+        <select class="fi" id="taskDur">
+          <option value="0.5">30分钟</option><option value="1" selected>1小时</option>
+          <option value="1.5">1.5小时</option><option value="2">2小时</option>
+          <option value="3">3小时</option><option value="4">4小时</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg"><label>备注</label><textarea class="fi" placeholder="补充..." rows="2"></textarea></div>
+    <button class="btn" onclick="addTask()">添加任务</button>
+    <button class="btn btn-cancel" style="margin-top:6px" onclick="closeModal('taskModal')">取消</button>
+  </div>
+</div>
+
+<!-- Reflection Modal (Template-based) -->
+<div class="modal-bg" id="reflModal" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>☀️ 晨间反思</h3>
+    <div class="tpl-tabs">
+      <div class="tpl-tab active" onclick="switchTpl(this,'refl','daily')">每日反思</div>
+      <div class="tpl-tab" onclick="switchTpl(this,'refl','weekly')">每周回顾</div>
+      <div class="tpl-tab" onclick="switchTpl(this,'refl','custom')">自定义</div>
+    </div>
+    <div id="refl-tpl-daily">
+      <div class="tpl-question">
+        <div class="tq-label">🎯 今天最重要的3件事</div>
+        <input class="tq-input" placeholder="1." value="完成原型V5" style="margin-bottom:6px">
+        <input class="tq-input" placeholder="2." value="30分钟阅读" style="margin-bottom:6px">
+        <input class="tq-input" placeholder="3." value="锻炼身体">
+      </div>
+      <div class="tpl-question">
+        <div class="tq-label">✨ 昨天值得保持的事</div>
+        <textarea class="tq-input" placeholder="回顾昨天...">早起成功，精神状态好</textarea>
+      </div>
+      <div class="tpl-question">
+        <div class="tq-label">😊 现在的心情</div>
+        <div style="display:flex;gap:12px;font-size:32px;margin-top:4px">
+          <span style="cursor:pointer;opacity:1">😊</span><span style="cursor:pointer;opacity:.4">🔥</span>
+          <span style="cursor:pointer;opacity:.4">😌</span><span style="cursor:pointer;opacity:.4">😴</span><span style="cursor:pointer;opacity:.4">🤔</span>
+        </div>
+      </div>
+      <div class="tpl-question">
+        <div class="tq-label">💬 给今天的自己一句话</div>
+        <input class="tq-input" value="今天要专注！">
+      </div>
+    </div>
+    <div id="refl-tpl-weekly" style="display:none">
+      <div class="tpl-question">
+        <div class="tq-label">📊 本周完成了哪些重要的事？</div>
+        <textarea class="tq-input" placeholder="回顾这周的成就..."></textarea>
+      </div>
+      <div class="tpl-question">
+        <div class="tq-label">🤔 本周最大的收获是什么？</div>
+        <textarea class="tq-input" placeholder="学到了什么..."></textarea>
+      </div>
+      <div class="tpl-question">
+        <div class="tq-label">⚠️ 下周需要改进什么？</div>
+        <textarea class="tq-input" placeholder="不足之处..."></textarea>
+      </div>
+      <div class="tpl-question">
+        <div class="tq-label">🎯 下周最重要的目标</div>
+        <textarea class="tq-input" placeholder="下周的重点..."></textarea>
+      </div>
+    </div>
+    <div id="refl-tpl-custom" style="display:none">
+      <div style="padding:10px;text-align:center;color:var(--text2);font-size:13px">
+        <p style="margin-bottom:12px">📝 自定义反思模板</p>
+        <p style="font-size:12px;margin-bottom:8px">你可以创建自己的反思问题：</p>
+      </div>
+      <div class="tpl-question">
+        <div class="tq-label">问题 1</div>
+        <input class="tq-input" placeholder="输入你的反思问题..." value="今天感恩的事是什么？">
+      </div>
+      <div class="tpl-question">
+        <div class="tq-label">问题 2</div>
+        <input class="tq-input" placeholder="输入你的反思问题..." value="今天学到了什么？">
+      </div>
+      <div class="tpl-question">
+        <div class="tq-label">问题 3</div>
+        <input class="tq-input" placeholder="输入你的反思问题...">
+      </div>
+      <button style="width:100%;padding:8px;border:1.5px dashed #D1D5DB;border-radius:8px;background:transparent;color:var(--primary);font-size:13px;cursor:pointer">+ 添加问题</button>
+    </div>
+    <button class="btn" onclick="closeModal('reflModal')">开始新的一天 🌅</button>
+  </div>
+</div>
+
+<!-- Review Modal (Template-based) -->
+<div class="modal-bg" id="reviewModal" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>🌙 晚间复盘</h3>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:12px">4月22日 · 星期三</p>
+    <div class="tpl-tabs">
+      <div class="tpl-tab active" onclick="switchTpl(this,'rv','quick')">快速复盘</div>
+      <div class="tpl-tab" onclick="switchTpl(this,'rv','detail')">详细复盘</div>
+      <div class="tpl-tab" onclick="switchTpl(this,'rv','kpt')">KPT法</div>
+      <div class="tpl-tab" onclick="switchTpl(this,'rv','custom')">自定义</div>
+    </div>
+    <!-- Quick review -->
+    <div id="rv-tpl-quick">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px">📋 今日任务完成情况</div>
+      <div class="rv-task"><span style="flex:1">🧘 晨间冥想</span><div class="rv-status"><div class="sb done sel">✅</div></div></div>
+      <div class="rv-task"><span style="flex:1">📝 产品方案文档</span><div class="rv-status"><div class="sb done sel">✅</div></div></div>
+      <div class="rv-task"><span style="flex:1">💻 开发原型</span><div class="rv-status"><button class="sb done" onclick="selS(this)">✅</button><button class="sb post" onclick="selS(this)">⏭️</button><button class="sb cancel" onclick="selS(this)">❌</button></div></div>
+      <div class="rv-task"><span style="flex:1">📞 团队周会</span><div class="rv-status"><button class="sb done" onclick="selS(this)">✅</button><button class="sb post" onclick="selS(this)">⏭️</button><button class="sb cancel" onclick="selS(this)">❌</button></div></div>
+      <div class="rv-task"><span style="flex:1">📚 阅读</span><div class="rv-status"><button class="sb done" onclick="selS(this)">✅</button><button class="sb post sel" onclick="selS(this)">⏭️</button><button class="sb cancel" onclick="selS(this)">❌</button></div></div>
+      <div class="rv-task"><span style="flex:1">🏃 锻炼</span><div class="rv-status"><button class="sb done" onclick="selS(this)">✅</button><button class="sb post" onclick="selS(this)">⏭️</button><button class="sb cancel sel" onclick="selS(this)">❌</button></div></div>
+      <div class="tpl-question" style="margin-top:12px">
+        <div class="tq-label">💬 一句话总结今天</div>
+        <textarea class="tq-input" rows="2">专注力比昨天好，但下午被会议打断了</textarea>
+      </div>
+    </div>
+    <!-- Detail review -->
+    <div id="rv-tpl-detail" style="display:none">
+      <div class="tpl-question">
+        <div class="tq-label">⭐ 今天做得好的</div>
+        <textarea class="tq-input" placeholder="哪些事情做得不错..."></textarea>
+      </div>
+      <div class="tpl-question">
+        <div class="tq-label">⚠️ 需要改进的</div>
+        <textarea class="tq-input" placeholder="哪些可以做得更好..."></textarea>
+      </div>
+      <div class="tpl-question">
+        <div class="tq-label">📊 时间分配合理吗？</div>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <span style="padding:6px 14px;border-radius:20px;font-size:12px;background:#F0FDF4;color:var(--success);cursor:pointer">很合理</span>
+          <span style="padding:6px 14px;border-radius:20px;font-size:12px;background:var(--primary-bg);color:var(--primary);cursor:pointer">还行</span>
+          <span style="padding:6px 14px;border-radius:20px;font-size:12px;background:#FEF2F2;color:var(--danger);cursor:pointer">不合理</span>
+        </div>
+      </div>
+      <div class="tpl-question">
+        <div class="tq-label">🔄 明天需要调整什么？</div>
+        <textarea class="tq-input" placeholder="明天打算怎么改进..."></textarea>
+      </div>
+    </div>
+    <!-- KPT review -->
+    <div id="rv-tpl-kpt" style="display:none">
+      <div class="tpl-question">
+        <div class="tq-label">🟢 Keep（保持）— 做得好要继续的</div>
+        <textarea class="tq-input" placeholder="哪些好习惯/做法要继续..."></textarea>
+      </div>
+      <div class="tpl-question">
+        <div class="tq-label">🔴 Problem（问题）— 遇到的问题</div>
+        <textarea class="tq-input" placeholder="遇到了什么问题..."></textarea>
+      </div>
+      <div class="tpl-question">
+        <div class="tq-label">🔵 Try（尝试）— 明天打算试什么</div>
+        <textarea class="tq-input" placeholder="明天打算尝试什么新方法..."></textarea>
+      </div>
+    </div>
+    <!-- Custom review -->
+    <div id="rv-tpl-custom" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span style="font-size:13px;font-weight:600">📝 自定义复盘模板</span>
+        <span style="font-size:12px;color:var(--primary);cursor:pointer" onclick="addReviewQuestion()">+ 添加问题</span>
+      </div>
+      <div id="customReviewQs">
+        <div class="tpl-question">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+            <span class="tq-label" style="flex:1;margin:0">问题 1</span>
+            <span style="cursor:pointer;font-size:14px;color:var(--danger);opacity:.5" onclick="this.closest('.tpl-question').remove()">✕</span>
+          </div>
+          <input class="tq-input" placeholder="输入你的复盘问题..." value="今天最有成就感的事是什么？">
+        </div>
+        <div class="tpl-question">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+            <span class="tq-label" style="flex:1;margin:0">问题 2</span>
+            <span style="cursor:pointer;font-size:14px;color:var(--danger);opacity:.5" onclick="this.closest('.tpl-question').remove()">✕</span>
+          </div>
+          <input class="tq-input" placeholder="输入你的复盘问题..." value="今天学到了什么新东西？">
+        </div>
+        <div class="tpl-question">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+            <span class="tq-label" style="flex:1;margin:0">问题 3</span>
+            <span style="cursor:pointer;font-size:14px;color:var(--danger);opacity:.5" onclick="this.closest('.tpl-question').remove()">✕</span>
+          </div>
+          <input class="tq-input" placeholder="输入你的复盘问题..." value="如果重来一次会怎么做？">
+        </div>
+      </div>
+      <button style="width:100%;padding:8px;border:1.5px dashed #D1D5DB;border-radius:8px;background:transparent;color:var(--primary);font-size:13px;cursor:pointer;margin-top:4px" onclick="addReviewQuestion()">+ 添加问题</button>
+    </div>
+    <button class="btn" onclick="closeModal('reviewModal')">完成复盘 ✓</button>
+  </div>
+</div>
+
+<!-- Add Goal Modal -->
+<div class="modal-bg" id="goalModal" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>🎯 添加目标</h3>
+    <div class="fg"><label>目标名称</label><input class="fi" placeholder="输入目标..."></div>
+    <div class="fg"><label>截止日期</label><input class="fi" type="date" value="2026-08-01"></div>
+    <div class="fg"><label>优先级</label>
+      <select class="fi"><option>🔴 高</option><option>🟡 中</option><option>⚪ 低</option></select>
+    </div>
+    <div class="fg"><label>描述</label><textarea class="fi" placeholder="描述目标..." rows="2"></textarea></div>
+    <button class="btn">创建目标</button>
+    <button class="btn btn-cancel" style="margin-top:6px" onclick="closeModal('goalModal')">取消</button>
+  </div>
+</div>
+
+<!-- Add Goal Task Modal -->
+<div class="modal-bg" id="goalAddModal" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>➕ 添加子任务</h3>
+    <div class="fg"><label>任务名称</label><input class="fi" placeholder="输入子任务名称..." id="goalTaskName"></div>
+    <div class="fg"><label>预估工时</label>
+      <select class="fi" id="goalTaskDur">
+        <option value="1">1小时</option><option value="2">2小时</option><option value="3">3小时</option><option value="4">4小时</option><option value="8">1天</option>
+      </select>
+    </div>
+    <div class="fg"><label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+      <input type="checkbox" id="addToSched" checked style="width:16px;height:16px">
+      <span>同时添加到日程</span>
+    </label></div>
+    <button class="btn" onclick="addGoalTask()">添加</button>
+    <button class="btn btn-cancel" style="margin-top:6px" onclick="closeModal('goalAddModal')">取消</button>
+  </div>
+</div>
+
+<!-- Create Template Modal -->
+<div class="modal-bg" id="createTplModal" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>📝 创建模板</h3>
+    <div class="fg"><label>模板名称</label><input class="fi" placeholder="例：感恩日记" id="newTplName"></div>
+    <div class="fg"><label>类型</label>
+      <select class="fi" id="newTplType"><option value="refl">反思模板</option><option value="rv">复盘模板</option></select>
+    </div>
+    <div class="fg"><label>图标</label>
+      <div style="display:flex;gap:10px;font-size:28px;margin-top:4px">
+        <span style="cursor:pointer;padding:4px;border-radius:8px;border:2px solid var(--primary);background:var(--primary-bg)" id="tplIcon1" onclick="selectTplIcon(this)">☀️</span>
+        <span style="cursor:pointer;padding:4px;border-radius:8px;border:2px solid transparent" id="tplIcon2" onclick="selectTplIcon(this)">🌙</span>
+        <span style="cursor:pointer;padding:4px;border-radius:8px;border:2px solid transparent" id="tplIcon3" onclick="selectTplIcon(this)">📝</span>
+        <span style="cursor:pointer;padding:4px;border-radius:8px;border:2px solid transparent" id="tplIcon4" onclick="selectTplIcon(this)">🎯</span>
+        <span style="cursor:pointer;padding:4px;border-radius:8px;border:2px solid transparent" id="tplIcon5" onclick="selectTplIcon(this)">💡</span>
+        <span style="cursor:pointer;padding:4px;border-radius:8px;border:2px solid transparent" id="tplIcon6" onclick="selectTplIcon(this)">🔍</span>
+      </div>
+    </div>
+    <div class="fg"><label>问题列表</label>
+      <div id="newTplQs">
+        <input class="fi" placeholder="问题 1" style="margin-bottom:6px">
+        <input class="fi" placeholder="问题 2" style="margin-bottom:6px">
+        <input class="fi" placeholder="问题 3">
+      </div>
+      <button style="width:100%;padding:8px;border:1.5px dashed #D1D5DB;border-radius:8px;background:transparent;color:var(--primary);font-size:13px;cursor:pointer;margin-top:8px" onclick="addTplQuestion()">+ 添加问题</button>
+    </div>
+    <button class="btn" onclick="saveTemplate()">保存模板</button>
+    <button class="btn btn-cancel" style="margin-top:6px" onclick="closeModal('createTplModal')">取消</button>
+  </div>
+</div>
+
+<!-- Journal Detail Modal -->
+<div class="modal-bg" id="journalDetailModal" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal" style="max-height:90%">
+    <div class="modal-handle"></div>
+    <div id="journalDetailContent"></div>
+    <button class="btn btn-cancel" style="margin-top:12px" onclick="closeModal('journalDetailModal')">关闭</button>
+  </div>
+</div>
+
+</div>
+
+<script>
+// === DATA ===
+const tasks = [
+  {id:1,start:7,dur:.5,title:'🧘 晨间冥想',goal:'',color:'green',done:true},
+  {id:2,start:8,dur:1.5,title:'📝 产品方案文档',goal:'g1',color:'orange',done:true},
+  {id:3,start:10,dur:2,title:'💻 开发原型界面',goal:'g1',color:'blue',done:false},
+  {id:4,start:12,dur:1,title:'🍜 午餐休息',goal:'',color:'gray',done:true},
+  {id:5,start:14,dur:1,title:'📞 团队周会',goal:'',color:'purple',done:false},
+  {id:6,start:16,dur:.5,title:'📚 30分钟阅读',goal:'g3',color:'yellow',done:false},
+  {id:7,start:18,dur:.5,title:'🏃 锻炼身体',goal:'g2',color:'green',done:false},
+];
+const goals = [
+  {id:'g1',name:'🎯 上线「日拱一卒」',pct:35,deadline:'8月1日',daysLeft:101,color:'#FF6B35',
+    children:[
+      {id:'g1-1',name:'📋 需求分析与设计',pct:90,expanded:true,children:[
+        {id:'g1-1-1',name:'用户调研',pct:100,done:true},
+        {id:'g1-1-2',name:'竞品分析',pct:100,done:true},
+        {id:'g1-1-3',name:'产品方案文档',pct:70,done:false},
+      ]},
+      {id:'g1-2',name:'💻 开发实现',pct:25,expanded:true,children:[
+        {id:'g1-2-1',name:'搭建项目框架',pct:100,done:true},
+        {id:'g1-2-2',name:'目标管理模块',pct:60,done:false},
+        {id:'g1-2-3',name:'日程规划模块',pct:10,done:false},
+        {id:'g1-2-4',name:'复盘功能',pct:0,done:false},
+      ]},
+      {id:'g1-3',name:'🚀 测试与上线',pct:0,expanded:false,children:[
+        {id:'g1-3-1',name:'内测',pct:0,done:false},
+        {id:'g1-3-2',name:'正式上线',pct:0,done:false},
+      ]},
+    ]
+  },
+  {id:'g2',name:'💪 保持健康体魄',pct:60,deadline:'持续中',daysLeft:null,color:'#10B981',
+    children:[
+      {id:'g2-1',name:'🏃 运动习惯',pct:80,expanded:true,children:[
+        {id:'g2-1-1',name:'每周跑步3次',pct:90,done:false},
+        {id:'g2-1-2',name:'力量训练',pct:70,done:false},
+      ]},
+      {id:'g2-2',name:'🥗 饮食管理',pct:40,expanded:false,children:[
+        {id:'g2-2-1',name:'控制碳水摄入',pct:50,done:false},
+        {id:'g2-2-2',name:'减少外卖',pct:30,done:false},
+      ]},
+    ]
+  },
+  {id:'g3',name:'📖 年读50本书',pct:28,deadline:'12月31日',daysLeft:253,color:'#F59E0B',
+    children:[
+      {id:'g3-1',name:'Q1 (13本)',pct:100,expanded:false,children:[]},
+      {id:'g3-2',name:'Q2 (13本)',pct:8,expanded:true,children:[
+        {id:'g3-2-1',name:'《原子习惯》',pct:70,done:false},
+        {id:'g3-2-2',name:'《深度工作》',pct:20,done:false},
+      ]},
+      {id:'g3-3',name:'Q3 (12本)',pct:0,expanded:false,children:[]},
+      {id:'g3-4',name:'Q4 (12本)',pct:0,expanded:false,children:[]},
+    ]
+  },
+  {id:'g4',name:'🎓 学习 Flutter',pct:100,deadline:'已完成',daysLeft:0,color:'#8B5CF6',
+    children:[
+      {id:'g4-1',name:'基础语法',pct:100,done:true},
+      {id:'g4-2',name:'项目实战',pct:100,done:true},
+    ]
+  },
+];
+
+// === TABS ===
+function swTab(name,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  const pg=document.getElementById('pg-'+name);
+  if(pg)pg.classList.add('active');
+  if(el&&el.classList.contains('tab'))el.classList.add('active');
+  document.querySelector('.fab').style.display=name==='sched'?'flex':'none';
+  if(name==='review')setTimeout(()=>{drawLine();drawPie();drawHeat()},50);
+  if(name==='journal')renderJournals();
+  if(name==='tplmgr')renderTplMgr();
+}
+
+// === SCHEDULE ===
+let currentView='day';
+function switchView(v,el){
+  currentView=v;
+  document.querySelectorAll('.vs').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('view-day').style.display=v==='day'?'block':'none';
+  document.getElementById('view-week').style.display=v==='week'?'block':'none';
+  document.getElementById('view-month').style.display=v==='month'?'block':'none';
+  if(v==='week')renderWeek();
+  if(v==='month')renderMonth();
+}
+function changeDate(d){}
+
+function renderDay(){
+  const g=document.getElementById('dayGrid');g.innerHTML='';
+  const s=6,e=24,rh=rowH;
+  for(let h=s;h<e;h++){
+    const row=document.createElement('div');row.className='dg-row';row.style.height=rh+'px';
+    const label=h<10?'0'+h+':00':h+':00';
+    row.innerHTML=`<div class="dg-hour">${label}</div><div class="dg-slot" data-hour="${h}" onclick="onSlotClick(${h})"></div>`;
+    g.appendChild(row);
+  }
+  tasks.forEach(t=>{
+    const top=(t.start-s)*rh+2,h=Math.max(t.dur*rh-4,24);
+    const b=document.createElement('div');
+    b.className='tblock c-'+t.color+(t.done?' done':'');
+    b.style.top=top+'px';b.style.height=h+'px';
+    const goalTag=t.goal?goals.find(g=>g.id===t.goal):null;
+    b.innerHTML=`<div class="tb-t">${t.title}</div>${goalTag?'<div class="tb-g">'+goalTag.name+'</div>':''}`;
+    b.onclick=()=>{t.done=!t.done;b.classList.toggle('done');updProg()};
+    g.appendChild(b);
+  });
+  const nl=document.createElement('div');nl.className='nowline';nl.style.top=((10.4-s)*rh)+'px';g.appendChild(nl);
+  g.style.position='relative';g.style.height=((e-s)*rh)+'px';
+  updProg();
+}
+function updProg(){
+  const d=tasks.filter(t=>t.done).length;
+  document.getElementById('progText').textContent=`完成 ${d}/${tasks.length}`;
+  // Calc free time
+  const busy=tasks.reduce((s,t)=>s+t.dur,0);
+  const free=18-busy;// 6:00-24:00=18h
+  document.getElementById('freeH').textContent=free.toFixed(1)+'h';
+}
+
+function onSlotClick(h){
+  document.getElementById('taskStart').value=(h<10?'0':'')+h+':00';
+  openModal('taskModal');
+}
+
+// Zoom
+let rowH=48,zoomLevel=1;
+function zoom(dir){
+  if(dir===0){rowH=48;zoomLevel=1}
+  else if(dir>0){rowH=Math.min(rowH+16,120);zoomLevel=Math.round(rowH/48*10)/10}
+  else{rowH=Math.max(rowH-12,24);zoomLevel=Math.round(rowH/48*10)/10}
+  document.getElementById('zoomLabel').textContent=zoomLevel+'x 缩放';
+  renderDay();
+}
+
+// Template switch
+function switchTpl(el,prefix,name){
+  el.parentElement.querySelectorAll('.tpl-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  el.parentElement.parentElement.querySelectorAll('[id^="'+prefix+'-tpl-"]').forEach(d=>d.style.display='none');
+  document.getElementById(prefix+'-tpl-'+name).style.display='block';
+}
+// Add custom review question
+let qCount=3;
+function addReviewQuestion(){
+  qCount++;
+  const div=document.createElement('div');div.className='tpl-question';
+  div.innerHTML=`<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+    <span class="tq-label" style="flex:1;margin:0">问题 ${qCount}</span>
+    <span style="cursor:pointer;font-size:14px;color:var(--danger);opacity:.5" onclick="this.closest('.tpl-question').remove()">✕</span>
+  </div>
+  <input class="tq-input" placeholder="输入你的复盘问题...">`;
+  document.getElementById('customReviewQs').appendChild(div);
+}
+
+// Week View
+function renderWeek(){
+  const g=document.getElementById('weekGrid');g.innerHTML='';
+  const days=['周一','周二','周三','周四','周五','周六','周日'];
+  const dates=[20,21,22,23,24,25,26];
+  let html='<div class="wg-header">';
+  days.forEach((d,i)=>{html+=`<div class="wg-hh${dates[i]===22?' today':''}">${d}<br>${dates[i]}</div>`});
+  html+='</div>';
+  // 3 time slots per day
+  for(let slot=0;slot<4;slot++){
+    html+='<div class="wg-row">';
+    days.forEach((d,i)=>{
+      const t=weekTasks(dates[i],slot);
+      html+=`<div class="wg-cell${dates[i]===22?' today':''}" onclick="onWeekCellClick(${dates[i]})">${t}</div>`;
+    });
+    html+='</div>';
+  }
+  g.innerHTML=html;
+}
+function weekTasks(date,slot){
+  if(date===22&&slot===0)return'<div class="wg-task orange">📝 文档</div><div class="wg-task blue">💻 原型</div>';
+  if(date===22&&slot===1)return'<div class="wg-task purple">📞 周会</div>';
+  if(date===22&&slot===2)return'<div class="wg-task green">🏃 锻炼</div>';
+  if(date===23&&slot===0)return'<div class="wg-task blue">💻 日程模块</div>';
+  if(date===24&&slot===0)return'<div class="wg-task blue">💻 复盘功能</div>';
+  if(date===21&&slot===0)return'<div class="wg-task orange">📝 文档</div>';
+  if(date===20&&slot===0)return'<div class="wg-task green">🏃 跑步</div>';
+  return'';
+}
+function onWeekCellClick(date){
+  document.getElementById('taskStart').value='09:00';
+  openModal('taskModal');
+}
+
+// Month View
+function renderMonth(){
+  const g=document.getElementById('monthGrid');g.innerHTML='';
+  const days=['一','二','三','四','五','六','日'];
+  let html='<div class="mg-header">';
+  days.forEach(d=>{html+=`<div class="mg-hh">${d}</div>`});
+  html+='</div>';
+  // April 2026 starts on Wednesday (index 2)
+  const startDay=2,daysInMonth=30;
+  const taskDays=[1,3,5,7,8,10,12,14,15,17,19,20,21,22,23,24,27,29];
+  let day=1,row=0;
+  while(day<=daysInMonth||row<5){
+    html+='<div class="mg-row">';
+    for(let i=0;i<7;i++){
+      if(row===0&&i<startDay||day>daysInMonth){html+='<div class="mg-cell other"></div>'}
+      else if(day<=daysInMonth){
+        const cls=day===22?'today':taskDays.includes(day)?'has-task':'';
+        html+=`<div class="mg-cell ${cls}">${day}</div>`;day++;
+      }
+    }
+    html+='</div>';row++;
+  }
+  g.innerHTML=html;
+}
+
+// === GOALS (Gantt + multi-level tree) ===
+let expandedGoal=null;
+function renderGoals(){
+  // Gantt
+  const todayPct=Math.round(22/30*100);
+  let gh='<div class="gantt-header">';
+  ['0%','','25%','','50%','','75%','','100%'].forEach(l=>{gh+=`<span>${l}</span>`});
+  gh+='</div>';
+  let gb='';
+  goals.filter(g=>g.pct<100).forEach(g=>{
+    gb+=`<div class="gantt-row">
+      <div class="gantt-label">${g.name.slice(0,6)}</div>
+      <div class="gantt-track">
+        <div class="gantt-bar" style="width:${g.pct}%;background:${g.color}"></div>
+        <div class="gantt-today" style="left:${todayPct}%"></div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('ganttHeader').innerHTML=gh;
+  document.getElementById('ganttBody').innerHTML=gb;
+
+  // Goal rows with tree
+  let html='';
+  goals.forEach(g=>{
+    const daysTxt=g.daysLeft===null?'持续':g.daysLeft===0?'✅ 已完成':`剩${g.daysLeft}天`;
+    const isExp=expandedGoal===g.id;
+    html+=`<div class="goal-row" onclick="toggleGoal('${g.id}')">
+      <div class="gr-top">
+        <div class="gr-name">${g.name}</div>
+        <div class="gr-pct" style="color:${g.color}">${g.pct}%</div>
+      </div>
+      <div class="gr-bar"><div class="gr-fill" style="width:${g.pct}%;background:${g.color}"></div></div>
+      <div class="gr-info"><span>📅 ${g.deadline}</span><span>${daysTxt}</span></div>
+    </div>`;
+    // Expand tree
+    if(isExp){
+      html+=`<div class="goal-expand show" id="ge-${g.id}">`;
+      html+='<div class="ge-title">📂 任务拆解</div>';
+      html+=renderTree(g.children,g.color,'g'+g.id,1);
+      html+='<button class="ge-add-btn" onclick="openModal(\'goalAddModal\'); return false;">+ 添加子任务</button>';
+      html+='</div>';
+    }
+  });
+  document.getElementById('goalList').innerHTML=html;
+}
+function renderTree(nodes,color,prefix,level){
+  if(!nodes||nodes.length===0)return'<div style="padding:8px;color:var(--text2);font-size:12px">暂无子任务</div>';
+  let html='';
+  nodes.forEach(n=>{
+    const icon=n.children?'📁':'📝';
+    const status=n.done?'✅':n.pct>0?'🔄':'⬜';
+    const hasChildren=n.children&&n.children.length>0;
+    html+=`<div class="g-node level-${level}${n.done?' done':''}">
+      <div class="gn-row">
+        <div class="gn-icon">${status}</div>
+        <div class="gn-name">${n.name}</div>
+        <div class="gn-pct">${n.pct}%</div>
+        <div class="gn-acts">
+          <button class="gn-btn" onclick="quickAddToSched('${n.name}','${color}'); return false;">📅</button>
+          ${hasChildren?`<button class="gn-btn" onclick="toggleNode('${n.id}'); return false;">${n.expanded?'▼':'▶'}</button>`:''}
+        </div>
+      </div>`;
+    if(n.expanded&&hasChildren){
+      html+=renderTree(n.children,color,n.id,level+1);
+    }
+    html+='</div>';
+  });
+  return html;
+}
+function toggleNode(id){event.stopPropagation();/* Toggle node expansion */}
+function toggleGoal(id){
+  expandedGoal=expandedGoal===id?null:id;
+  renderGoals();
+}
+// Quick add goal task to schedule
+function quickAddToSched(taskName,color){
+  document.getElementById('taskInput').value=taskName;
+  openModal('taskModal');
+}
+
+// === MODALS ===
+function openModal(id){document.getElementById(id).classList.add('active')}
+function closeModal(id){document.getElementById(id).classList.remove('active')}
+function selS(btn){btn.parentElement.querySelectorAll('.sb').forEach(s=>s.classList.remove('sel'));btn.classList.add('sel')}
+
+// === CHARTS ===
+function drawLine(){
+  const c=document.getElementById('lineChart');if(!c)return;
+  const ctx=c.getContext('2d'),dpr=devicePixelRatio||1;
+  c.width=c.offsetWidth*dpr;c.height=150*dpr;ctx.scale(dpr,dpr);
+  const w=c.offsetWidth,h=150,data=[65,80,55,92,78,85,70],labels=['一','二','三','四','五','六','日'];
+  const p={t:20,b:30,l:30,r:10},cw=w-p.l-p.r,ch=h-p.t-p.b;
+  ctx.strokeStyle='#F0F0F0';ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){const y=p.t+(ch/4)*i;ctx.beginPath();ctx.moveTo(p.l,y);ctx.lineTo(w-p.r,y);ctx.stroke()}
+  ctx.beginPath();ctx.strokeStyle='#FF6B35';ctx.lineWidth=2.5;ctx.lineJoin='round';
+  data.forEach((v,i)=>{const x=p.l+(cw/(data.length-1))*i,y=p.t+ch*(1-v/100);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)});
+  ctx.stroke();ctx.lineTo(p.l+cw,p.t+ch);ctx.lineTo(p.l,p.t+ch);ctx.closePath();ctx.fillStyle='rgba(255,107,53,.1)';ctx.fill();
+  data.forEach((v,i)=>{const x=p.l+(cw/(data.length-1))*i,y=p.t+ch*(1-v/100);ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fillStyle='#FF6B35';ctx.fill();ctx.fillStyle='white';ctx.beginPath();ctx.arc(x,y,2,0,Math.PI*2);ctx.fill();ctx.fillStyle='#9CA3AF';ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText(labels[i],x,h-8)});
+}
+function drawPie(){
+  const c=document.getElementById('pieChart');if(!c)return;
+  const ctx=c.getContext('2d'),dpr=devicePixelRatio||1;
+  c.width=c.offsetWidth*dpr;c.height=180*dpr;ctx.scale(dpr,dpr);
+  const w=c.offsetWidth,h=180,cx=w/2-50,cy=h/2,r=60;
+  const data=[{v:35,c:'#FF6B35',l:'时间不够'},{v:25,c:'#F59E0B',l:'被打断'},{v:20,c:'#8B5CF6',l:'难度超预期'},{v:15,c:'#6B7280',l:'计划不合理'},{v:5,c:'#D1D5DB',l:'动力不足'}];
+  let s=-Math.PI/2;const tot=data.reduce((a,d)=>a+d.v,0);
+  data.forEach(d=>{const a=(d.v/tot)*Math.PI*2;ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,s,s+a);ctx.fillStyle=d.c;ctx.fill();s+=a});
+  ctx.beginPath();ctx.arc(cx,cy,30,0,Math.PI*2);ctx.fillStyle='white';ctx.fill();
+  let ly=20;ctx.font='12px sans-serif';data.forEach(d=>{ctx.fillStyle=d.c;ctx.fillRect(w-90,ly,10,10);ctx.fillStyle='#374151';ctx.fillText(d.l,w-76,ly+9);ctx.fillStyle='#9CA3AF';ctx.fillText(d.v+'%',w-76,ly+22);ly+=30});
+}
+function drawHeat(){
+  const c=document.getElementById('heatmap');if(!c)return;c.innerHTML='';
+  const lv=['','l1','l2','l3','l4'];
+  for(let i=0;i<28;i++){const d=document.createElement('div');d.className='hc '+(Math.random()>.2?lv[Math.floor(Math.random()*5)]:'');c.appendChild(d)}
+}
+
+// === INIT ===
+// Populate goal select
+const taskGoalSel=document.getElementById('taskGoal');
+goals.forEach(g=>{
+  const opt=document.createElement('option');
+  opt.value=g.id;opt.textContent=g.name;
+  taskGoalSel.appendChild(opt);
+});
+renderDay();
+renderGoals();
+// Populate goal select in add task modal
+function addTask(){
+  const name=document.getElementById('taskInput').value||'新任务';
+  const start=parseFloat(document.getElementById('taskStart').value);
+  const dur=parseFloat(document.getElementById('taskDur').value);
+  const goal=document.getElementById('taskGoal').value;
+  const colors=['orange','blue','green','purple','yellow'];
+  tasks.push({id:Date.now(),start,dur,title:name,goal,color:colors[Math.floor(Math.random()*colors.length)],done:false});
+  tasks.sort((a,b)=>a.start-b.start);
+  document.getElementById('taskInput').value='';
+  document.getElementById('taskGoal').value='';
+  closeModal('taskModal');
+  renderDay();
+}
+function addGoalTask(){
+  const name=document.getElementById('goalTaskName').value||'新子任务';
+  const dur=parseFloat(document.getElementById('goalTaskDur').value);
+  const addToSched=document.getElementById('addToSched').checked;
+  if(addToSched){
+    const colors=['orange','blue','green','purple','yellow'];
+    tasks.push({id:Date.now(),start:9,dur,title:name,goal:'',color:colors[Math.floor(Math.random()*colors.length)],done:false});
+    tasks.sort((a,b)=>a.start-b.start);
+    renderDay();
+  }
+  document.getElementById('goalTaskName').value='';
+  closeModal('goalAddModal');
+}
+
+// === TEMPLATES DATA ===
+let savedTemplates=[
+  {id:'t1',name:'每日反思',type:'refl',icon:'☀️',builtIn:true,questions:['今天最重要的3件事','昨天值得保持的事','现在的心情','给今天的自己一句话']},
+  {id:'t2',name:'每周回顾',type:'refl',icon:'📝',builtIn:true,questions:['本周完成了哪些重要的事','最大的收获是什么','下周需要改进什么','下周最重要的目标']},
+  {id:'t3',name:'快速复盘',type:'rv',icon:'🌙',builtIn:true,questions:['任务完成情况','一句话总结']},
+  {id:'t4',name:'KPT法',type:'rv',icon:'🎯',builtIn:true,questions:['Keep - 做得好要继续的','Problem - 遇到的问题','Try - 明天打算试什么']},
+  {id:'t5',name:'感恩日记',type:'refl',icon:'💡',builtIn:false,questions:['今天感恩的3件事','为什么感恩','明天想对谁表达感谢']},
+];
+let selectedTplIcon='☀️';
+
+function renderTplMgr(){
+  let html='';
+  savedTemplates.forEach(t=>{
+    html+=`<div class="saved-tpl" onclick="useTemplate('${t.id}')">
+      <div class="st-icon">${t.icon}</div>
+      <div class="st-info">
+        <div class="st-name">${t.name}</div>
+        <div class="st-meta">${t.type==='refl'?'反思':'复盘'} · ${t.questions.length}个问题${t.builtIn?' · 内置':''}</div>
+      </div>
+      <div class="st-acts">
+        <div class="st-btn" onclick="event.stopPropagation();editTemplate('${t.id}')">✏️</div>
+        ${!t.builtIn?`<div class="st-btn del" onclick="event.stopPropagation();deleteTemplate('${t.id}')">🗑</div>`:''}
+      </div>
+    </div>`;
+  });
+  document.getElementById('tplMgrList').innerHTML=html;
+}
+let tplMgrTab='refl';
+function switchTplMgr(el,tab){
+  tplMgrTab=tab;
+  el.parentElement.querySelectorAll('.tpl-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderTplMgr();
+}
+function selectTplIcon(el){
+  document.querySelectorAll('[id^="tplIcon"]').forEach(e=>{e.style.borderColor='transparent';e.style.background='transparent'});
+  el.style.borderColor='var(--primary)';el.style.background='var(--primary-bg)';
+  selectedTplIcon=el.textContent;
+}
+let newTplQCount=3;
+function addTplQuestion(){
+  newTplQCount++;
+  const input=document.createElement('input');input.className='fi';
+  input.placeholder='问题 '+newTplQCount;input.style.marginBottom='6px';
+  document.getElementById('newTplQs').appendChild(input);
+}
+function saveTemplate(){
+  const name=document.getElementById('newTplName').value||'新模板';
+  const type=document.getElementById('newTplType').value;
+  const qs=document.getElementById('newTplQs').querySelectorAll('input');
+  const questions=Array.from(qs).map(q=>q.value).filter(v=>v.trim());
+  savedTemplates.push({id:'t'+Date.now(),name,type,icon:selectedTplIcon,builtIn:false,questions});
+  document.getElementById('newTplName').value='';
+  qs.forEach(q=>q.value='');
+  closeModal('createTplModal');
+  renderTplMgr();
+}
+function deleteTemplate(id){
+  savedTemplates=savedTemplates.filter(t=>t.id!==id);
+  renderTplMgr();
+}
+function editTemplate(id){}
+function useTemplate(id){}
+
+// === JOURNAL DATA ===
+let journals=[
+  {id:'j1',type:'refl',template:'每日反思',date:'2026-04-22',time:'08:05',content:'今天最重要的：完成原型V5、阅读30分钟、锻炼身体。昨天早起成功精神好。心情🔥。今天要专注！'},
+  {id:'j2',type:'rv',template:'快速复盘',date:'2026-04-21',time:'21:30',content:'完成任务5/6，完成率83%。专注力比昨天好，但下午被会议打断节奏了。阅读推迟到明天。'},
+  {id:'j3',type:'refl',template:'每日反思',date:'2026-04-21',time:'08:10',content:'今天最重要的：突破技术难点、完成文档、跑步。前天早睡效果不错。心情😊。加油！'},
+  {id:'j4',type:'rv',template:'KPT法',date:'2026-04-20',time:'22:00',content:'Keep：晨间冥想习惯坚持得很好。Problem：下午被会议打断，效率骤降。Try：明天把重要任务集中在上午。'},
+  {id:'j5',type:'refl',template:'感恩日记',date:'2026-04-20',time:'08:15',content:'感恩：1.同事帮忙解决bug 2.天气好心情好 3.阅读到好书。想感谢同事请他喝咖啡。'},
+  {id:'j6',type:'rv',template:'详细复盘',date:'2026-04-19',time:'21:45',content:'做得好的：早起+专注2小时。需改进的：刷手机太多。时间分配还行。明天要减少干扰。'},
+  {id:'j7',type:'refl',template:'每日反思',date:'2026-04-19',time:'07:50',content:'今天最重要的：开发核心功能、读两章书、早点睡。昨天效率很高值得保持。心情🔥。'},
+  {id:'j8',type:'rv',template:'快速复盘',date:'2026-04-18',time:'21:20',content:'高效的一天，完成率95%。所有任务都按时完成。明天继续保持。'},
+  {id:'j9',type:'refl',template:'每周回顾',date:'2026-04-18',time:'09:00',content:'本周完成：原型设计+文档+跑步3次。最大收获：学会了时间块管理。下周改进：减少会议时间。下周目标：完成开发模块。'},
+  {id:'j10',type:'rv',template:'KPT法',date:'2026-04-17',time:'22:10',content:'Keep：每天30分钟阅读。Problem：锻炼总推到太晚。Try：把锻炼改到早上。'},
+  {id:'j11',type:'refl',template:'每日反思',date:'2026-04-17',time:'08:20',content:'今天最重要的：团队会议准备、完成文档初稿、游泳。昨天阅读了一本好书。心情😌。'},
+  {id:'j12',type:'rv',template:'快速复盘',date:'2026-04-16',time:'21:00',content:'完成4/5任务。文档花了比预期更长的时间。明天调整计划。'},
+];
+let journalFilter='all';
+function renderJournals(){
+  const keyword=(document.getElementById('journalSearch')?.value||'').toLowerCase();
+  let filtered=journals.filter(j=>{
+    if(journalFilter!=='all'&&j.type!==journalFilter)return false;
+    if(keyword&&!j.content.toLowerCase().includes(keyword)&&!j.template.toLowerCase().includes(keyword)&&!j.date.includes(keyword))return false;
+    return true;
+  });
+  if(filtered.length===0){
+    document.getElementById('journalList').innerHTML=`<div class="journal-empty"><div class="je-icon">📭</div><div class="je-text">${keyword?'没有找到匹配的记录':'暂无记录'}</div><div style="font-size:12px;color:var(--text3)">${keyword?'试试其他关键词':'开始你的第一次反思吧'}</div></div>`;
+    return;
+  }
+  let html='';
+  let lastDate='';
+  filtered.forEach(j=>{
+    if(j.date!==lastDate){
+      html+=`<div style="font-size:13px;font-weight:600;color:var(--text2);padding:8px 0 4px">${j.date}</div>`;
+      lastDate=j.date;
+    }
+    let body=j.content;
+    if(keyword){
+      const re=new RegExp('('+keyword.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
+      body=body.replace(re,'<span class="highlight">$1</span>');
+    }
+    const trunc=body.length>120?body.substring(0,120)+'...':body;
+    html+=`<div class="journal-card" onclick="viewJournal('${j.id}')">
+      <div class="jc-header">
+        <span class="jc-type ${j.type}">${j.type==='refl'?'☀️ 反思':'🌙 复盘'}</span>
+        <span class="jc-date">${j.time}</span>
+      </div>
+      <div class="jc-tpl">📋 ${j.template}</div>
+      <div class="jc-body">${trunc}</div>
+    </div>`;
+  });
+  document.getElementById('journalList').innerHTML=html;
+}
+function filterJournals(){renderJournals()}
+function toggleFilter(el,type){
+  document.querySelectorAll('.search-filter').forEach(f=>f.classList.remove('active'));
+  el.classList.add('active');
+  journalFilter=type;
+  renderJournals();
+}
+function viewJournal(id){
+  const j=journals.find(x=>x.id===id);
+  if(!j)return;
+  document.getElementById('journalDetailContent').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <span class="jc-type ${j.type}" style="font-size:13px;padding:4px 12px">${j.type==='refl'?'☀️ 反思':'🌙 复盘'}</span>
+      <span style="font-size:13px;color:var(--text2)">${j.date} ${j.time}</span>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:12px">📋 模板：${j.template}</div>
+    <div style="font-size:15px;line-height:1.8;white-space:pre-wrap">${j.content}</div>
+  `;
+  openModal('journalDetailModal');
+}
+</script>
+</body>
+</html>

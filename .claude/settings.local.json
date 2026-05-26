@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter test*)",
+      "Bash(flutter analyze*)",
+      "Bash(flutter pub *)",
+      "Bash(flutter run*)",
+      "Bash(flutter build*)",
+      "Bash(dart *)",
+      "Bash(flutter build *)",
+      "Bash(git commit -m ' *)",
+      "Bash(python -c \"from PIL import Image; print\\('Pillow available'\\)\")",
+      "Bash(python scripts/generate_icon.py)",
+      "Bash(git tag *)",
+      "Bash(git ls-remote *)",
+      "Bash(git ls-tree *)",
+      "Bash(git checkout *)",
+      "Bash(git commit *)"
+    ]
+  }
+}

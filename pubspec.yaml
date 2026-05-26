@@ -1,0 +1,40 @@
+name: rigongyizu
+description: "日拱一卒 - 目标驱动 + 日程管理 + 复盘闭环 APP"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # 状态管理
+  flutter_riverpod: ^2.6.1
+
+  # 本地存储
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+  # 图表
+  fl_chart: ^0.70.2
+
+  # 工具
+  uuid: ^4.5.1
+  intl: ^0.20.2
+  path_provider: ^2.1.5
+  share_plus: ^13.1.0
+  flutter_local_notifications: ^21.0.0
+  timezone: ^0.11.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
